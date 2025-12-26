@@ -164,7 +164,7 @@ class AntsAlgorithm():
 
         # Hyper parameters
         self.epoch_num = 300
-        self.ant_per_epoch = 200
+        self.ant_per_epoch = 400  # Further increased for better exploration
         self.lam = 2000.0
         self.ro = 0.95
         self.phe = np.ones((self.job_num + 1,
