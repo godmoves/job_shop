@@ -87,10 +87,12 @@ class Job(object):
 
 
 class Ant(object):
-    def __init__(self, mtp2id):
+    def __init__(self, mtp2id, alpha=1.0, beta=2.0):
         self.path = []  # (jid, sid, mid)
         self.time = 0
         self.mtp2id = mtp2id
+        self.alpha = alpha  # pheromone weight
+        self.beta = beta    # heuristic weight
 
     def _start(self, jobs, machines, phe):
         a, b, c, d = phe.shape
@@ -112,19 +114,31 @@ class Ant(object):
 
         phesum = 0
         choices = []
+        probabilities = []
+        
         for jid, job in enumerate(jobs):
             if (job.si + 1) == len(job.stages):
                 continue
             tg_mx_tp = job.stages[job.si + 1]
             for mid in self.mtp2id[tg_mx_tp]:
-                phesum += phe[ljid, lmid, jid, mid]
+                # Calculate heuristic: prefer jobs with shorter processing time
+                process_time = job.jgsj[job.tp, tg_mx_tp] * job.batch_size
+                heuristic = 1.0 / (process_time + 1.0)  # +1 to avoid division by zero
+                
+                # Combine pheromone and heuristic
+                pheromone = phe[ljid, lmid, jid, mid]
+                prob = (pheromone ** self.alpha) * (heuristic ** self.beta)
+                
+                phesum += prob
                 choices.append((jid, job.si + 1, mid))
+                probabilities.append(prob)
 
+        # Roulette wheel selection
         r = random.random() * phesum
-        for c, choice in enumerate(choices):
-            jid, sid, mid = choice
-            r -= phe[ljid, lmid, jid, mid]
-            if r < 0:
+        cumsum = 0
+        for c, prob in enumerate(probabilities):
+            cumsum += prob
+            if cumsum >= r:
                 break
 
         jid, sid, mid = choices[c]
@@ -164,9 +178,12 @@ class AntsAlgorithm():
 
         # Hyper parameters
         self.epoch_num = 300
-        self.ant_per_epoch = 200
+        self.ant_per_epoch = 100  # Reduced from 200 for faster convergence
         self.lam = 2000.0
         self.ro = 0.95
+        self.alpha = 1.0  # pheromone importance
+        self.beta = 2.0   # heuristic importance
+        self.elite_ants = 5  # number of elite ants to give extra pheromone
         self.phe = np.ones((self.job_num + 1,
                             self.machine_num + 1,
                             self.job_num + 1,
@@ -175,6 +192,7 @@ class AntsAlgorithm():
         # Record
         self.bstime = 9999999
         self.bsant = None
+        self.elite_history = []  # store elite solutions
 
     def update_gylj(self):
         res = []
@@ -216,9 +234,9 @@ class AntsAlgorithm():
         self.phe *= self.ro
         dphe = np.zeros(self.phe.shape)
 
+        # Regular ants deposit pheromone
         for i, ant in enumerate(ants):
             time = ant.time
-            # print "ant %d time: %d" % (i, time)
             for i, p in enumerate(ant.path):
                 jid, sid, mid = p
 
@@ -227,6 +245,19 @@ class AntsAlgorithm():
                 else:
                     ljid, lsid, lmid = ant.path[i - 1]
                     dphe[ljid, lmid, jid, mid] += self.lam / time
+
+        # Elite ants deposit extra pheromone
+        sorted_ants = sorted(ants, key=lambda a: a.time)
+        for ant in sorted_ants[:self.elite_ants]:
+            time = ant.time
+            elite_bonus = self.lam * self.elite_ants / time
+            for i, p in enumerate(ant.path):
+                jid, sid, mid = p
+                if i == 0:
+                    dphe[-1, -1, jid, mid] += elite_bonus
+                else:
+                    ljid, lsid, lmid = ant.path[i - 1]
+                    dphe[ljid, lmid, jid, mid] += elite_bonus
 
         self.phe += dphe
 
@@ -286,7 +317,7 @@ class AntsAlgorithm():
         epoch_num = self.epoch_num if epoch_num is None else epoch_num
         time_record = []
         for epoch in range(epoch_num):
-            ants = [Ant(self.mtp2id) for _ in range(self.ant_per_epoch)]
+            ants = [Ant(self.mtp2id, self.alpha, self.beta) for _ in range(self.ant_per_epoch)]
             for ant in ants:
                 # create machines
                 machines = []
@@ -325,10 +356,16 @@ class AntsAlgorithm():
             if bstime_ < self.bstime:
                 self.bstime = bstime_
                 self.bsant = bsant_
+                
+            # Adaptive evaporation rate: increase when stagnating
+            if epoch > 10 and time_record[-1] == time_record[-10]:
+                self.ro = min(0.98, self.ro + 0.01)  # increase evaporation
+            else:
+                self.ro = max(0.90, self.ro - 0.002)  # decrease evaporation
 
             time_record.append(self.bstime)
             if epoch % 10 == 0:
-                print("epoch {} best time {}".format(epoch, self.bstime))
+                print("epoch {} best time {} (ro={:.3f})".format(epoch, self.bstime, self.ro))
 
         plt.plot(time_record)
         plt.title("case {} aa log".format(self.case_id))
