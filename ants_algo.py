@@ -178,12 +178,12 @@ class AntsAlgorithm():
 
         # Hyper parameters
         self.epoch_num = 300
-        self.ant_per_epoch = 100  # Reduced from 200 for faster convergence
+        self.ant_per_epoch = 150  # Balance between speed and quality
         self.lam = 2000.0
         self.ro = 0.95
         self.alpha = 1.0  # pheromone importance
-        self.beta = 2.0   # heuristic importance
-        self.elite_ants = 5  # number of elite ants to give extra pheromone
+        self.beta = 1.0   # heuristic importance (reduced for balance)
+        self.elite_ants = 3  # number of elite ants to give extra pheromone
         self.phe = np.ones((self.job_num + 1,
                             self.machine_num + 1,
                             self.job_num + 1,
@@ -357,11 +357,11 @@ class AntsAlgorithm():
                 self.bstime = bstime_
                 self.bsant = bsant_
                 
-            # Adaptive evaporation rate: increase when stagnating
-            if epoch > 10 and time_record[-1] == time_record[-10]:
-                self.ro = min(0.98, self.ro + 0.01)  # increase evaporation
-            else:
-                self.ro = max(0.90, self.ro - 0.002)  # decrease evaporation
+            # Adaptive evaporation rate: increase when stagnating (less aggressive)
+            if epoch > 20 and len(time_record) >= 20 and time_record[-1] == time_record[-20]:
+                self.ro = min(0.97, self.ro + 0.005)  # slight increase in evaporation
+            elif epoch > 0 and len(time_record) >= 2 and time_record[-1] < time_record[-2]:
+                self.ro = max(0.92, self.ro - 0.001)  # slight decrease when improving
 
             time_record.append(self.bstime)
             if epoch % 10 == 0:

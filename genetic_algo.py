@@ -26,7 +26,7 @@ class GeneticAlgo:
                     if idx % 2 == 1:
                         self.pop[i, idx] = np.random.randint(0, self.max_priority)
                     else:
-                        self.pop[i, idx] = np.randon.randint(0, self.machines[j])
+                        self.pop[i, idx] = np.random.randint(0, self.machines[j])
 
     def mutate(self, pop_id):
         rate = np.random.rand()
@@ -38,12 +38,12 @@ class GeneticAlgo:
         # if pos % 2 == 1:
         #     chrom[pos] = np.random.randint(0, self.max_priority)
         # else:
-        #     chrom[pos] = np.randon.randint(0, self.machines[pos // 2])
+        #     chrom[pos] = np.random.randint(0, self.machines[pos // 2])
         # return chrom
         if pos % 2 == 1:
             self.pop[pop_id, pos] = np.random.randint(0, self.max_priority)
         else:
-            self.pop[pop_id, pos] = np.randon.randint(0, self.machines[pos // 2])
+            self.pop[pop_id, pos] = np.random.randint(0, self.machines[pos // 2])
 
     def cross(self, father_id):
         rate = np.random.rand()
