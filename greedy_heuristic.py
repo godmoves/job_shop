@@ -138,11 +138,11 @@ class GreedyHeuristic:
             jobs_with_time.sort(key=lambda x: x[2], reverse=True)
             
             # Track load on each machine
-            machine_loads = [0] * self.Nm[stage_idx]
+            machine_loads = np.array([0] * self.Nm[stage_idx])
             
             # Assign each job to machine with minimum load
             for j, b, p_time in jobs_with_time:
-                min_machine = min(range(self.Nm[stage_idx]), key=lambda m: machine_loads[m])
+                min_machine = np.argmin(machine_loads)
                 order[stage_idx][min_machine].append((j, b))
                 machine_loads[min_machine] += p_time
         

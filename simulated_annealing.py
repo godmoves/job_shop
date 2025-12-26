@@ -3,6 +3,7 @@ import random
 import copy
 
 from case_data import *
+from timer import Timer
 
 
 class SimulatedAnnealing:
@@ -21,6 +22,7 @@ class SimulatedAnnealing:
         self.Nj = list(map(sum, JOBS[case_id]))
         self.jgsj = PROCESS_TIME[case_id]
         self.hmsj = CHANGE_TIME[case_id].transpose(2, 0, 1)
+        self.max_batch_num = MAX_BATCH_NUM[case_id]
         
         # SA parameters
         self.initial_temp = 10000
@@ -34,11 +36,8 @@ class SimulatedAnnealing:
         
     def evaluate_order(self, order):
         """Calculate makespan for a given order"""
-        from timer import Timer
-        timer = Timer(case_id=self.case_id, orders=order, verbose=False, random_mode=False)
-        
         # Calculate time efficiently
-        t = np.zeros((len(self.Nj), MAX_BATCH_NUM[self.case_id], len(self.Nm) + 1, max(self.Nm)))
+        t = np.zeros((len(self.Nj), self.max_batch_num, len(self.Nm) + 1, max(self.Nm)))
         
         for s in range(1, len(self.Nm) + 1):
             for m in range(self.Nm[s - 1]):

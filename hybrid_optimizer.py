@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 from ants_algo import AntsAlgorithm
 from greedy_heuristic import GreedyHeuristic
 from timer import Timer
+from case_data import MACHINES, JOBS, PROCESS_TIME, CHANGE_TIME
 
 
 class HybridOptimizer:
@@ -30,7 +31,6 @@ class HybridOptimizer:
                      verbose=False, random_mode=False)
         
         # Simple evaluation
-        from case_data import MACHINES, JOBS, PROCESS_TIME, CHANGE_TIME
         max_time = 0
         for stage_idx in range(len(MACHINES) - 1):
             for machine_idx in range(MACHINES[stage_idx + 1]):

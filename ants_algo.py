@@ -87,7 +87,7 @@ class Job(object):
 
 
 class Ant(object):
-    def __init__(self, mtp2id, alpha=1.0, beta=2.0):
+    def __init__(self, mtp2id, alpha=1.0, beta=1.0):
         self.path = []  # (jid, sid, mid)
         self.time = 0
         self.mtp2id = mtp2id
@@ -184,6 +184,7 @@ class AntsAlgorithm():
         self.alpha = 1.0  # pheromone importance
         self.beta = 1.0   # heuristic importance (reduced for balance)
         self.elite_ants = 3  # number of elite ants to give extra pheromone
+        self.stagnation_threshold = 20  # epochs without improvement before increasing evaporation
         self.phe = np.ones((self.job_num + 1,
                             self.machine_num + 1,
                             self.job_num + 1,
@@ -358,8 +359,9 @@ class AntsAlgorithm():
                 self.bsant = bsant_
                 
             # Adaptive evaporation rate: increase when stagnating (less aggressive)
-            if epoch > 20 and len(time_record) >= 20 and time_record[-1] == time_record[-20]:
-                self.ro = min(0.97, self.ro + 0.005)  # slight increase in evaporation
+            if epoch > self.stagnation_threshold and len(time_record) >= self.stagnation_threshold:
+                if time_record[-1] == time_record[-self.stagnation_threshold]:
+                    self.ro = min(0.97, self.ro + 0.005)  # slight increase in evaporation
             elif epoch > 0 and len(time_record) >= 2 and time_record[-1] < time_record[-2]:
                 self.ro = max(0.92, self.ro - 0.001)  # slight decrease when improving
 
